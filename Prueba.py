@@ -4,7 +4,7 @@ import sys
 
 # Inicialización
 pygame.init()
-ANCHO, ALTO = 800, 600
+ANCHO, ALTO = 898, 506
 Pantalla = pygame.display.set_mode((898, 506))
 pygame.display.set_caption("Space Invaders Full")
 clock = pygame.time.Clock()
@@ -12,25 +12,39 @@ fuente = pygame.font.SysFont("arial", 30)
 
 # Cargar imágenes
 fondo = pygame.image.load("Fondos/Juego.png")
-nave_img = pygame.image.load("Skin/Ship.png")
-nave_img = pygame.transform.scale(nave_img, (50, 40))
-
-alien_img = pygame.image.load("Skin/Crab.png")
-alien_img = pygame.transform.scale(alien_img, (40, 30))
-
+fondo = pygame.transform.scale(fondo, (898, 506))
+Nave = pygame.image.load("Skin/Ship.png")
+Nave = pygame.transform.scale(Nave, (110, 100))
+Crab_1 = pygame.image.load("Skin/Alien/Crab 1.png")
+Crab_1 = pygame.transform.scale(Crab_1, (100, 100))
+Crab_2 = pygame.image.load("Skin/Alien/Crab 2.png")
+Crab_2 = pygame.transform.scale(Crab_2, (100, 100))
+Crab_dead = pygame.image.load("Skin/Alien/Crab dead.png")
+Crab_dead = pygame.transform.scale(Crab_dead, (100, 100))
+Octopus_1 = pygame.image.load("Skin/Alien/Octopus 1.png")
+Octopus_1 = pygame.transform.scale(Octopus_1, (100, 100))
+Octopus_2 = pygame.image.load("Skin/Alien/Octopus 2.png")
+Octopus_2 = pygame.transform.scale(Octopus_2, (100, 100))
+Octopus_dead = pygame.image.load("Skin/Alien/Octopus dead.png")
+Octopus_dead = pygame.transform.scale(Octopus_dead, (100, 100))
+Squid_1 = pygame.image.load("Skin/Alien/Squid 1.png")
+Squid_1 = pygame.transform.scale(Squid_1, (100, 100))
+Squid_2 = pygame.image.load("Skin/Alien/Squid 2.png")
+Squid_2 = pygame.transform.scale(Squid_2, (100, 100))
+Squid_dead = pygame.image.load("Skin/Alien/Squid dead.png")
+Squid_dead = pygame.transform.scale(Squid_dead, (100, 100))
+Ovni_1 = pygame.image.load("Skin/Alien/Ovni 1.png")
+Ovni_1 = pygame.transform.scale(Ovni_1, (100, 100))
+Ovni_2 = pygame.image.load("Skin/Alien/Ovni 2.png")
+Ovni_2 = pygame.transform.scale(Ovni_2, (100, 100))
+Ovni_dead = pygame.image.load("Skin/Alien/Ovni dead.png")
+Ovni_dead = pygame.transform.scale(Ovni_dead, (100, 100))
 bala_img = pygame.image.load("Skin/Bala.png")
-bala_img = pygame.transform.scale(bala_img, (10, 10))
-bala_alien_img = pygame.image.load("Skin/Bala Alien.png")
-bala_alien_img = pygame.transform.scale(bala_alien_img, (10, 10))
-
+bala_img = pygame.transform.scale(bala_img, (80, 80))
+bala_alien= pygame.image.load("Skin/Bala Alien.png")
+bala_alien = pygame.transform.scale(bala_alien, (80, 80))
 explosion_img = pygame.image.load("Skin/Explocion.png")
 explosion_img = pygame.transform.scale(explosion_img, (40, 40))
-
-# Cargar sonidos
-pygame.mixer.music.load("Sonidos/Fondo.mp3")
-pygame.mixer.music.play(-1)
-disparo_sonido = pygame.mixer.Sound("Sonidos/Blast.wav")
-explosion_sonido = pygame.mixer.Sound("Sonidos/Explotion.wav")
 
 # Colores
 BLANCO = (255, 255, 255)
@@ -39,44 +53,56 @@ ROJO = (255, 0, 0)
 # Clases
 class Jugador:
     def __init__(self):
-        self.rect = pygame.Rect(375, 450, 50, 40)
-
+        self.rect = pygame.Rect(375, 400, 60, 50)
         self.vidas = 3
         self.puntaje = 0
         self.vel = 5
-
-    def mover(self, teclas):
-        if teclas[pygame.K_LEFT] and self.rect.left > 0:
+    def mover(self, precionar):
+        if precionar[pygame.K_LEFT] and self.rect.left > 0:
             self.rect.x -= self.vel
-        if teclas[pygame.K_RIGHT] and self.rect.right < ANCHO:
+        if precionar[pygame.K_RIGHT] and self.rect.right < ANCHO:
             self.rect.x += self.vel
-
     def dibujar(self):
-        Pantalla.blit(nave_img, self.rect.topleft)
+        Pantalla.blit(Nave, self.rect.topleft)
 
 class Enemigo:
-    def __init__(self, x, y):
+    def __init__(self, x, y, imagen_1, imagen_2, imagen_3):
         self.rect = pygame.Rect(x, y, 40, 30)
         self.direccion = 1
-
+        self.imagenes = [imagen_1, imagen_2]
+        self.dead = imagen_3
+        self.indice_imagen = 0
+        self.intervalo_cambio = 500
+        self.ultimo_cambio = pygame.time.get_ticks()
+        self.muerto = False
+        self.tiempo_muerte = 0
     def mover(self):
-        self.rect.x += self.direccion
-        if self.rect.right >= ANCHO or self.rect.left <= 0:
-            self.direccion *= -1
-            self.rect.y += 10
-
+        if not self.muerto:
+            self.rect.x += self.direccion
+            if self.rect.right >= ANCHO or self.rect.left <= 0:
+                self.direccion *= -1
+                self.rect.y += 10
     def dibujar(self):
-        Pantalla.blit(alien_img, self.rect.topleft)
+        tiempo_actual = pygame.time.get_ticks()
+        if self.muerto:
+            Pantalla.blit(self.dead, self.rect.topleft)
+            if tiempo_actual - self.tiempo_muerte >= 500:
+                return False
+        else:
+            if tiempo_actual - self.ultimo_cambio >= self.intervalo_cambio:
+                self.indice_imagen = (self.indice_imagen + 1) % len(self.imagenes)
+                self.ultimo_cambio = tiempo_actual
+            imagen_actual = self.imagenes[self.indice_imagen]
+            Pantalla.blit(imagen_actual, self.rect.topleft)
+        return True
 
 class Bala:
     def __init__(self, x, y, vel, imagen):
-        self.rect = pygame.Rect(x, y, 4, 10)
+        self.rect = pygame.Rect(x, y, 14, 10)
         self.vel = vel
         self.imagen = imagen
-
     def mover(self):
         self.rect.y += self.vel
-
     def dibujar(self):
         Pantalla.blit(self.imagen, self.rect.topleft)
 
@@ -137,69 +163,60 @@ while True:
 
     for fila in range(filas):
         for col in range(columnas):
-            enemigos.append(Enemigo(100 + col * espacio_x, 50 + fila * espacio_y))
+            enemigos.append(Enemigo(100 + col * espacio_x, 50 + fila * espacio_y, Octopus_1, Octopus_2, Octopus_dead))
 
-    # Loop de juego
     while jugador.vidas > 0:
         clock.tick(60)
         Pantalla.blit(fondo, (0, 0))
 
-        # Eventos
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
 
-        # Movimiento jugador
         teclas = pygame.key.get_pressed()
         jugador.mover(teclas)
         if teclas[pygame.K_SPACE]:
             if len(balas) < 5:
-                disparo_sonido.play()
                 balas.append(Bala(jugador.rect.centerx - 2, jugador.rect.top, -7, bala_img))
 
-        # Movimiento balas
         for bala in balas[:]:
             bala.mover()
             if bala.rect.bottom < 0:
                 balas.remove(bala)
 
-        # Movimiento enemigos y disparos enemigos
         for enemigo in enemigos:
             enemigo.mover()
-            if random.randint(0, 300) == 1:
-                balas_enemigas.append(Bala(enemigo.rect.centerx, enemigo.rect.bottom, 5, bala_alien_img))
+            if random.randint(0, 300) == 1 and not enemigo.muerto:
+                balas_enemigas.append(Bala(enemigo.rect.centerx, enemigo.rect.bottom, 5, bala_alien))
 
-        # Movimiento balas enemigas
         for bala in balas_enemigas[:]:
             bala.mover()
             if bala.rect.top > ALTO:
                 balas_enemigas.remove(bala)
 
-        # Colisiones balas jugador con enemigos
         for bala in balas[:]:
             for enemigo in enemigos[:]:
-                if bala.rect.colliderect(enemigo.rect):
-                    explosion_sonido.play()
+                if bala.rect.colliderect(enemigo.rect) and not enemigo.muerto:
                     balas.remove(bala)
-                    enemigos.remove(enemigo)
-                    explosiones.append(Explosion(enemigo.rect.x, enemigo.rect.y))
+                    enemigo.muerto = True
+                    enemigo.tiempo_muerte = pygame.time.get_ticks()
                     jugador.puntaje += 10
                     break
 
-        # Colisiones balas enemigas con jugador
         for bala in balas_enemigas[:]:
             if bala.rect.colliderect(jugador.rect):
-                explosion_sonido.play()
                 balas_enemigas.remove(bala)
                 jugador.vidas -= 1
                 explosiones.append(Explosion(jugador.rect.x, jugador.rect.y))
                 break
 
-        # Dibujar todo
         jugador.dibujar()
-        for enemigo in enemigos:
-            enemigo.dibujar()
+
+        for enemigo in enemigos[:]:
+            if not enemigo.dibujar():
+                enemigos.remove(enemigo)
+
         for bala in balas:
             bala.dibujar()
         for bala in balas_enemigas:
