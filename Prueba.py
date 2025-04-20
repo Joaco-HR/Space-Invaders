@@ -45,6 +45,9 @@ bala_alien= pygame.image.load("Skin/Bala Alien.png")
 bala_alien = pygame.transform.scale(bala_alien, (80, 80))
 explosion_img = pygame.image.load("Skin/Explocion.png")
 explosion_img = pygame.transform.scale(explosion_img, (40, 40))
+Blast = pygame.mixer.Sound("Sonidos/Blast.wav")
+Dead = pygame.mixer.Sound("Sonidos/Dead-Alien.wav")
+Explotion = pygame.mixer.Sound("Sonidos/Explotion.wav")
 
 # Colores
 BLANCO = (255, 255, 255)
@@ -57,11 +60,19 @@ class Jugador:
         self.vidas = 3
         self.puntaje = 0
         self.vel = 5
+        self.ultimo_disparo = 0 
+        self.intervalo_disparo = 200 
     def mover(self, precionar):
         if precionar[pygame.K_LEFT] and self.rect.left > 0:
             self.rect.x -= self.vel
         if precionar[pygame.K_RIGHT] and self.rect.right < ANCHO:
             self.rect.x += self.vel
+    def disparar(self, teclas):
+        tiempo_actual = pygame.time.get_ticks()
+        if teclas[pygame.K_SPACE] and tiempo_actual - self.ultimo_disparo >= self.intervalo_disparo:
+            Blast.play()
+            self.ultimo_disparo = tiempo_actual  
+            return True 
     def dibujar(self):
         Pantalla.blit(Nave, self.rect.topleft)
 
@@ -86,7 +97,8 @@ class Enemigo:
         tiempo_actual = pygame.time.get_ticks()
         if self.muerto:
             Pantalla.blit(self.dead, self.rect.topleft)
-            if tiempo_actual - self.tiempo_muerte >= 500:
+            Dead.play()
+            if tiempo_actual - self.tiempo_muerte >= 300:
                 return False
         else:
             if tiempo_actual - self.ultimo_cambio >= self.intervalo_cambio:
@@ -97,7 +109,7 @@ class Enemigo:
         return True
 
 class Bala:
-    def __init__(self, x, y, vel, imagen):
+    def __init__(self, x, y, vel, imagen, ):
         self.rect = pygame.Rect(x, y, 14, 10)
         self.vel = vel
         self.imagen = imagen
@@ -113,6 +125,7 @@ class Explosion:
 
     def dibujar(self):
         Pantalla.blit(explosion_img, self.rect.topleft)
+        Explotion.play()
         self.tiempo -= 1
 
 # Funciones
@@ -131,6 +144,8 @@ def pantalla_inicio():
                 pygame.quit()
                 sys.exit()
             if evento.type == pygame.KEYDOWN and evento.key == pygame.K_SPACE:
+                pygame.mixer.music.load("Sonidos/Fondo.mp3")
+                pygame.mixer.music.play(-1)  
                 esperando = False
 
 def pantalla_game_over(puntaje):
@@ -159,7 +174,7 @@ while True:
     explosiones = []
 
     filas, columnas = 4, 8
-    espacio_x, espacio_y = 60, 50
+    espacio_x, espacio_y = 70, 70
 
     for fila in range(filas):
         for col in range(columnas):
@@ -176,15 +191,19 @@ while True:
 
         teclas = pygame.key.get_pressed()
         jugador.mover(teclas)
-        if teclas[pygame.K_SPACE]:
-            if len(balas) < 5:
+        
+        # Verificamos si el jugador puede disparar
+        if jugador.disparar(teclas):
+            if len(balas) < 5:  # Aseguramos que no haya más de 5 balas en pantalla
                 balas.append(Bala(jugador.rect.centerx - 2, jugador.rect.top, -7, bala_img))
 
+        # Procesamos el movimiento y la eliminación de las balas
         for bala in balas[:]:
             bala.mover()
             if bala.rect.bottom < 0:
                 balas.remove(bala)
 
+        # Procesamos los enemigos y sus disparos
         for enemigo in enemigos:
             enemigo.mover()
             if random.randint(0, 300) == 1 and not enemigo.muerto:
@@ -195,6 +214,7 @@ while True:
             if bala.rect.top > ALTO:
                 balas_enemigas.remove(bala)
 
+        # Verificación de colisiones entre balas del jugador y los enemigos
         for bala in balas[:]:
             for enemigo in enemigos[:]:
                 if bala.rect.colliderect(enemigo.rect) and not enemigo.muerto:
@@ -202,15 +222,17 @@ while True:
                     enemigo.muerto = True
                     enemigo.tiempo_muerte = pygame.time.get_ticks()
                     jugador.puntaje += 10
-                    break
+                    break  # Detenerse después de la primera colisión para evitar colisiones múltiples
 
+        # Verificación de colisiones entre las balas enemigas y el jugador
         for bala in balas_enemigas[:]:
             if bala.rect.colliderect(jugador.rect):
                 balas_enemigas.remove(bala)
                 jugador.vidas -= 1
                 explosiones.append(Explosion(jugador.rect.x, jugador.rect.y))
-                break
+                break  # Solo una bala enemiga puede impactar al jugador
 
+        # Dibujamos todo lo necesario en pantalla
         jugador.dibujar()
 
         for enemigo in enemigos[:]:
@@ -226,6 +248,7 @@ while True:
             if explosion.tiempo <= 0:
                 explosiones.remove(explosion)
 
+        # Mostrar puntaje y vidas en pantalla
         mostrar_texto(f"Puntaje: {jugador.puntaje}", 10, 10)
         mostrar_texto(f"Vidas: {jugador.vidas}", 680, 10)
 
