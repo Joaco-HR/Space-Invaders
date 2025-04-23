@@ -1,5 +1,6 @@
 import pygame
 import sys
+from Single_Player import juego_single_player
 
 # Inicializar Pygame y sus módulos  
 pygame.init()
@@ -68,7 +69,7 @@ while True:
                     Seleccion = (Seleccion - 1) % len(Inicio)
                 elif event.key == pygame.K_RETURN:
                     if Seleccion == 0:
-                        print("")
+                        juego_single_player()
                     elif Seleccion == 1:
                         print("")
                     elif Seleccion == 2:

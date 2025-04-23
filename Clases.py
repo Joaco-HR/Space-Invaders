@@ -50,12 +50,12 @@ Explotion = pygame.mixer.Sound("Sonidos/Explotion.wav")
 # Clases
 class Jugador:
     def __init__(self):
-        self.rect = pygame.Rect(375, 400, 60, 50)
+        self.rect = pygame.Rect(375, 500, 60, 50)
         self.vidas = 3
         self.puntaje = 0
         self.vel = 5
         self.ultimo_disparo = 0 
-        self.intervalo_disparo = 200 
+        self.intervalo_disparo = 500 
     def mover(self, precionar):
         if precionar[pygame.K_LEFT] and self.rect.left > 0:
             self.rect.x -= self.vel
@@ -71,7 +71,7 @@ class Jugador:
         Pantalla.blit(Nave, self.rect.topleft)
 
 class Enemigo:
-    def __init__(self, x, y, imagen_1, imagen_2, imagen_3):
+    def __init__(self, x, y, imagen_1, imagen_2, imagen_3,  tipo):
         self.rect = pygame.Rect(x, y, 40, 30)
         self.direccion = 1
         self.imagenes = [imagen_1, imagen_2]
@@ -81,12 +81,23 @@ class Enemigo:
         self.ultimo_cambio = pygame.time.get_ticks()
         self.muerto = False
         self.tiempo_muerte = 0
+        self.tipo = tipo  # 'C', 'S', 'O'
+
+    def obtener_puntos(self):
+        """Devuelve los puntos según el tipo de enemigo."""
+        if self.tipo == 'C':
+            return 10  # Crab
+        elif self.tipo == 'S':
+            return 20  # Squid
+        elif self.tipo == 'O':
+            return 30  # Octopus
+        return 0
     def mover(self):
         if not self.muerto:
             self.rect.x += self.direccion
             if self.rect.right >= ANCHO or self.rect.left <= 0:
                 self.direccion *= -1
-                self.rect.y += 10
+                self.rect.y += 35
     def dibujar(self):
         tiempo_actual = pygame.time.get_ticks()
         if self.muerto:
@@ -132,7 +143,13 @@ class Ovni:
         self.tiempo_reaparicion = 0
         self.fuera_pantalla = False
         self.tiempo_fuera = 0
-
+    def revivir(self, direccion):
+        self.muerto = False
+        self.direccion = direccion
+        if direccion == "derecha":
+            self.rect.x = -self.rect.width
+        else:
+            self.rect.x = 930
     def mover(self):
         tiempo_actual = pygame.time.get_ticks()
 
