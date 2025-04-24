@@ -43,9 +43,9 @@ bala_alien= pygame.image.load("Skin/Bala Alien.png")
 bala_alien = pygame.transform.scale(bala_alien, (80, 80))
 explosion_img = pygame.image.load("Skin/Explocion.png")
 explosion_img = pygame.transform.scale(explosion_img, (40, 40))
-Blast = pygame.mixer.Sound("Sonidos/Blast.wav")
-Dead = pygame.mixer.Sound("Sonidos/Dead-Alien.wav")
-Explotion = pygame.mixer.Sound("Sonidos/Explotion.wav")
+#Blast = pygame.mixer.Sound("Sonidos/Blast.wav")
+#Dead = pygame.mixer.Sound("Sonidos/Dead-Alien.wav")
+#Explotion = pygame.mixer.Sound("Sonidos/Explotion.wav")
 
 # Clases
 class Jugador:
@@ -56,15 +56,19 @@ class Jugador:
         self.vel = 5
         self.ultimo_disparo = 0 
         self.intervalo_disparo = 500 
-    def mover(self, precionar):
-        if precionar[pygame.K_LEFT] and self.rect.left > 0:
+    def mover(self, presionar):
+        if presionar[pygame.K_LEFT]:
             self.rect.x -= self.vel
-        if precionar[pygame.K_RIGHT] and self.rect.right < ANCHO:
+        if presionar[pygame.K_RIGHT]:
             self.rect.x += self.vel
+        if self.rect.left < 0:
+            self.rect.left = 0
+        if self.rect.right > ANCHO:
+            self.rect.right = ANCHO
     def disparar(self, teclas):
         tiempo_actual = pygame.time.get_ticks()
         if teclas[pygame.K_SPACE] and tiempo_actual - self.ultimo_disparo >= self.intervalo_disparo:
-            Blast.play()
+            #Blast.play()
             self.ultimo_disparo = tiempo_actual  
             return True 
     def dibujar(self):
@@ -81,7 +85,10 @@ class Enemigo:
         self.ultimo_cambio = pygame.time.get_ticks()
         self.muerto = False
         self.tiempo_muerte = 0
-        self.tipo = tipo  # 'C', 'S', 'O'
+        self.tipo = tipo
+        self.balas = [] 
+        self.intervalo_disparo = 1000
+        self.ultimo_disparo = 0 
 
     def obtener_puntos(self):
         """Devuelve los puntos según el tipo de enemigo."""
@@ -98,11 +105,17 @@ class Enemigo:
             if self.rect.right >= ANCHO or self.rect.left <= 0:
                 self.direccion *= -1
                 self.rect.y += 35
+    def disparar(self):
+        tiempo_actual = pygame.time.get_ticks()
+        if tiempo_actual - self.ultimo_disparo >= self.intervalo_disparo:
+            self.ultimo_disparo = tiempo_actual
+            nueva_bala = Bala(self.rect.centerx - 7, self.rect.bottom, 5, bala_alien)
+            self.balas.append(nueva_bala)
     def dibujar(self):
         tiempo_actual = pygame.time.get_ticks()
         if self.muerto:
             Pantalla.blit(self.dead, self.rect.topleft)
-            Dead.play()
+            #Dead.play()
             if tiempo_actual - self.tiempo_muerte >= 300:
                 return False
         else:
@@ -112,128 +125,48 @@ class Enemigo:
             imagen_actual = self.imagenes[self.indice_imagen]
             Pantalla.blit(imagen_actual, self.rect.topleft)
         return True
-
 class Ovni:
-    def __init__(self, imagen1, imagen2, imagen_muerte):
-        self.imagenes = [imagen1, imagen2]
-        self.dead = imagen_muerte
-        self.rect = imagen1.get_rect()
-        self.rect.y = 10
-        self.velocidad = 4
-        self.direccion = 1  # 1: izquierda a derecha, -1: derecha a izquierda
+    def __init__(self, imagen_1, imagen_2, imagen_3):
+        self.rect = pygame.Rect(10, 20, 40, 30)
+        self.direccion = 4
+        self.imagenes = [imagen_1, imagen_2]
+        self.dead = imagen_3
         self.indice_imagen = 0
         self.intervalo_cambio = 500
         self.ultimo_cambio = pygame.time.get_ticks()
         self.muerto = False
-        self.sonido_reproducido = False
-        self.tiempo_muerte = 0
-        self.tiempo_reaparicion = 0
-        self.fuera_pantalla = False
-        self.tiempo_fuera = 0
-        self.reiniciar_posicion()
-
-    def reiniciar_posicion(self):
-        if self.direccion == 1:
-            self.rect.x = -self.rect.width
-        else:
-            self.rect.x = 898
-        self.muerto = False
-        self.sonido_reproducido = False
-        self.tiempo_muerte = 0
-        self.tiempo_reaparicion = 0
-        self.fuera_pantalla = False
-        self.tiempo_fuera = 0
-    def revivir(self, direccion):
-        self.muerto = False
-        self.direccion = direccion
-        if direccion == "derecha":
-            self.rect.x = -self.rect.width
-        else:
-            self.rect.x = 930
+        self.tiempo_espera = 8000 
     def mover(self):
-        tiempo_actual = pygame.time.get_ticks()
-
-        if self.muerto:
-            # Esperar 3 segundos mostrando imagen de muerte
-            if tiempo_actual - self.tiempo_muerte >= 1000:
-                self.rect.x = -2000  # ocultar de pantalla
-                if self.tiempo_reaparicion == 0:
-                    self.tiempo_reaparicion = tiempo_actual
-            # Después de 10 segundos reaparece
-            elif self.tiempo_reaparicion and tiempo_actual - self.tiempo_reaparicion >= 5000:
+        if not self.muerto:
+            self.rect.x += self.direccion
+            if self.rect.right >= ANCHO + 300:  
+                self.direccion *= -1  #
+            elif self.rect.left <= -300:  
                 self.direccion *= -1
-                self.reiniciar_posicion()
-
-        elif self.fuera_pantalla:
-            # Salió de la pantalla: espera 10 segundos para reaparecer
-            if tiempo_actual - self.tiempo_fuera >= 10000:
-                self.direccion *= -1
-                self.reiniciar_posicion()
-
         else:
-            self.rect.x += self.velocidad * self.direccion
-            if self.rect.right < 0 or self.rect.left > 898:
-                if not self.fuera_pantalla:
-                    self.fuera_pantalla = True
-                    self.tiempo_fuera = tiempo_actual
-
+            if pygame.time.get_ticks() - self.tiempo_muerte >= self.tiempo_espera:
+                self.reaparecer()
+                
     def dibujar(self):
         tiempo_actual = pygame.time.get_ticks()
         if self.muerto:
             Pantalla.blit(self.dead, self.rect.topleft)
-            if not self.sonido_reproducido:
-                Dead.play()
-                self.sonido_reproducido = True
-            return True
+            #Dead.play()
+            if tiempo_actual - self.tiempo_muerte >= 300:
+                return False
         else:
             if tiempo_actual - self.ultimo_cambio >= self.intervalo_cambio:
                 self.indice_imagen = (self.indice_imagen + 1) % len(self.imagenes)
                 self.ultimo_cambio = tiempo_actual
             imagen_actual = self.imagenes[self.indice_imagen]
             Pantalla.blit(imagen_actual, self.rect.topleft)
-            return True
-
-    def morir(self):
-        if not self.muerto:
-            self.muerto = True
-            self.tiempo_muerte = pygame.time.get_ticks()
-            self.tiempo_reaparicion = 0
-            self.sonido_reproducido = False
-
-class Bloque(pygame.sprite.Sprite):
-    def __init__(self, size, color, x, y):
-        super().__init__()
-        self.image = pygame.Surface((size, size))
-        self.image.fill(color)
-        self.rect = self.image.get_rect(topleft=(x, y))
-
-class BloqueCreacion:
-    def __init__(self, block_size):
-        self.block_size = block_size
-        self.blocks = pygame.sprite.Group()
-        self.shape = [
-            '  xxxxxxx',
-            ' xxxxxxxxx',
-            'xxxxxxxxxxx',
-            'xxxxxxxxxxx',
-            'xxxxxxxxxxx',
-            'xxx     xxx',
-            'xx       xx'
-        ]
-    def create_obstacle(self, x_start, y_start, offset_x):
-        for row_index, row in enumerate(self.shape):
-            for col_index, col in enumerate(row):
-                if col == 'x':
-                    x = x_start + col_index * self.block_size + offset_x
-                    y = y_start + row_index * self.block_size
-                    block = Bloque(self.block_size, (241, 79, 80), x, y)
-                    self.blocks.add(block)
-    def create_multiple_obstacles(self, *offsets, x_start, y_start):
-        for offset_x in offsets:
-            self.create_obstacle(x_start, y_start, offset_x)
-            
+        return True
+    def reaparecer(self):
+        self.muerto = False
+        self.rect = pygame.Rect(10, 20, 40, 30)
+        self.direccion = 4    
 class Bala:
-    def __init__(self, x, y, vel, imagen, ):
+    def __init__(self, x, y, vel, imagen):
         self.rect = pygame.Rect(x, y, 14, 10)
         self.vel = vel
         self.imagen = imagen
@@ -249,5 +182,43 @@ class Explosion:
 
     def dibujar(self):
         Pantalla.blit(explosion_img, self.rect.topleft)
-        Explotion.play()
+        #Explotion.play()
         self.tiempo -= 1
+
+class Bloque:
+    def __init__(self, forma, color, pixel, posicion):
+        self.forma = [list(fila) for fila in forma]  # Convertimos cada string en lista para poder modificar
+        self.color = color
+        self.pixel = pixel
+        self.posicion = posicion  # (x, y)
+
+    def dibujar(self, pantalla):
+        base_x, base_y = self.posicion
+        for y, fila in enumerate(self.forma):
+            for x, columna in enumerate(fila):
+                if columna == 'x':
+                    pygame.draw.rect(
+                        pantalla,
+                        self.color,
+                        pygame.Rect(
+                            base_x + x * self.pixel,
+                            base_y + y * self.pixel,
+                            self.pixel,
+                            self.pixel
+                        )
+                    )
+
+    def daño(self, rect_objetivo):
+        """Elimina un pixel del bloque si colisiona con rect_objetivo (puede ser una bala, enemigo, etc.)."""
+        base_x, base_y = self.posicion
+        for fila_idx, fila in enumerate(self.forma):
+            for col_idx, celda in enumerate(fila):
+                if celda == 'x':
+                    x = base_x + col_idx * self.pixel
+                    y = base_y + fila_idx * self.pixel
+                    rect_celda = pygame.Rect(x, y, self.pixel, self.pixel)
+                    if rect_celda.colliderect(rect_objetivo):
+                        self.forma[fila_idx][col_idx] = ' '  # Eliminar pixel
+                        return True  # Solo eliminamos uno por llamada
+        return False
+

@@ -2,6 +2,8 @@ import pygame
 import random
 import sys
 from Clases import Jugador, Enemigo, Ovni, Bala, Explosion, Bloque
+import os
+os.system('cls')
 
 def juego_single_player():
     pygame.init()
@@ -124,7 +126,7 @@ def juego_single_player():
         ]
     ]
     def crear_enemigos_desde_nivel(nivel):
-        enemigos = []
+        enemigos = []  # Esta será una lista de listas de enemigos
         tipo_enemigo = {
             "C": (Crab_1, Crab_2, Crab_dead, 10),
             "O": (Octopus_1, Octopus_2, Octopus_dead, 30),
@@ -132,6 +134,7 @@ def juego_single_player():
         }
         espacio_x, espacio_y = 70, 70
         for fila_idx, fila in enumerate(nivel):
+            fila_enemigos = []  # Creamos una lista para cada fila de enemigos
             for col_idx, tipo in enumerate(fila):
                 if tipo in tipo_enemigo:
                     x = 100 + col_idx * espacio_x
@@ -139,16 +142,16 @@ def juego_single_player():
                     img1, img2, img_dead, puntaje = tipo_enemigo[tipo]
                     enemigo = Enemigo(x, y, img1, img2, img_dead, tipo)
                     enemigo.puntaje = puntaje
-                    enemigos.append(Enemigo(x, y, img1, img2, img_dead, puntaje))
+                    fila_enemigos.append(enemigo)  # Agregamos el enemigo a la fila
+            enemigos.append(fila_enemigos)  # Añadimos la fila a la lista principal de enemigos
         return enemigos
-               
+          
     Blanco = (255, 255, 255)
     Rojo = (255, 0, 0)
-    
     ANCHO, ALTO = 898, 506
     nivel_actual = 0
-    reloj = pygame.time.Clock()
     ovni = Ovni(Ovni_1, Ovni_2, Ovni_dead)
+    reloj = pygame.time.Clock()
     jugador = Jugador()
     balas = []
     balas_enemigas = []
@@ -162,8 +165,19 @@ def juego_single_player():
     while jugador.vidas > 0:
         reloj.tick(60)
         Pantalla.blit(Fondo_Juego, (0, 0))
+        ovni.mover()
+        ovni.dibujar()
         for bloque in bloques:
             bloque.dibujar(Pantalla)
+        
+        if not ovni.muerto:
+            for bala in balas[:]:
+                if bala.rect.colliderect(ovni.rect):
+                    balas.remove(bala)
+                    ovni.morir()
+                    jugador.puntaje += 50
+                    break
+                
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 pygame.quit()
@@ -179,39 +193,33 @@ def juego_single_player():
             bala.mover()
             if bala.rect.bottom < 0:
                 balas.remove(bala)
-            
+    
+        # Mover enemigos por filas
+        for fila_enemigos in enemigos:
+            for enemigo in fila_enemigos:
+                enemigo.mover()  # Mueve el enemigo
+    
+        # Lógica para disparos de enemigos
         for enemigo in enemigos:
-            enemigo.mover()
-            if random.randint(0, 800) == 1 and not enemigo.muerto:
-                balas_enemigas.append(Bala(enemigo.rect.centerx + 2, enemigo.rect.bottom, 6, Bala_alien))
-            if enemigo.rect.colliderect(jugador.rect):  # Si el enemigo toca al jugador
-                jugador.vidas = 0  # El jugador pierde todas las vidas
-                break
-            else:
-                for bloque in bloques:
-                        if bloque.daño(enemigo.rect):
-                            break
+            for e in enemigo:  # Iteramos sobre la fila
+                if random.randint(0, 500) == 1 and not e.muerto:
+                    balas_enemigas.append(Bala(e.rect.centerx + 2, e.rect.bottom, 6, Bala_alien))
     
         for bala in balas_enemigas[:]:
-            bala.mover() 
+            bala.mover()
             if bala.rect.top > ALTO:
                 balas_enemigas.remove(bala)
     
         for bala in balas[:]:
-            for enemigo in enemigos[:]:
-                if bala.rect.colliderect(enemigo.rect) and not enemigo.muerto:
-                    balas.remove(bala)
-                    enemigo.muerto = True
-                    enemigo.tiempo_muerte = pygame.time.get_ticks()
-                    jugador.puntaje += enemigo.tipo
-                    break
-                if bala.rect.colliderect(ovni.rect) and not ovni.muerto:
-                    balas.remove(bala)
-                    ovni.muerto = True
-                    ovni.tiempo_muerte = pygame.time.get_ticks()
-                    jugador.puntaje += 50
-        ovni.dibujar()
-        ovni.mover()
+            for fila_enemigos in enemigos[:]:
+                for enemigo in fila_enemigos:  # Iteramos por fila y luego por enemigo
+                    if bala.rect.colliderect(enemigo.rect) and not enemigo.muerto:
+                        balas.remove(bala)
+                        enemigo.muerto = True
+                        enemigo.tiempo_muerte = pygame.time.get_ticks()
+                        jugador.puntaje += enemigo.puntaje
+                        break
+                    
         for bala in balas_enemigas[:]:
             if bala.rect.colliderect(jugador.rect):
                 balas_enemigas.remove(bala)
@@ -220,28 +228,28 @@ def juego_single_player():
                 break
             else:
                 for bloque in bloques:
-                    if bloque.daño(bala.rect):
+                    if bloque.recibir_disparo(bala.rect):
                         balas_enemigas.remove(bala)
                         break
+                    
         jugador.dibujar()
-        for enemigo in enemigos[:]:
-            if not enemigo.dibujar():
-                enemigos.remove(enemigo)
+        for fila_enemigos in enemigos[:]:
+            for enemigo in fila_enemigos[:]:
+                if not enemigo.dibujar():
+                    fila_enemigos.remove(enemigo)
         for bala in balas:
             bala.dibujar()
         for bala in balas_enemigas:
             bala.dibujar()
         for explosion in explosiones[:]:
             explosion.dibujar()
-            if explosion.tiempo <= 0:  
+            if explosion.tiempo <= 0:
                 explosiones.remove(explosion)
     
         Puntaje = Fuente.render(f"Puntaje: {jugador.puntaje}", True, Blanco)
         Vidas = Fuente.render(f"Vidas: {jugador.vidas}", True, Blanco)
-        Nivel = Fuente.render(f"Nivel: {nivel_actual + 1}", True, Blanco)
         Pantalla.blit(Puntaje, (10, 10))
-        Pantalla.blit(Vidas, (800, 10))
-        Pantalla.blit(Nivel,(10,40))
+        Pantalla.blit(Vidas, (750, 10))
         pygame.display.flip()
     
         if not enemigos:
