@@ -1,18 +1,23 @@
 import pygame
 import random
 import sys
-from Clases import Jugador, Enemigo, Ovni, Bala, Explosion, Bloque
+from Clases import Jugador, Enemigo, Ovni, Bala, Explosion, Bloque #Importamos las Clases desde el archivo de clases
 
 def juego_single_player():
     pygame.init()
+    #Definimo el tamaño de la pantalla y el nombre de esta
     Pantalla = pygame.display.set_mode((930, 600))
     pygame.display.set_caption("Space Invaders")
     
+    #Definimo el fondo
     Fondo_Juego = pygame.image.load("Fondos/Juego.png")
     Fondo_Juego = pygame.transform.scale(Fondo_Juego, (930, 600))
-    Fuente = pygame.font.Font("Tipografias/PressStart2P-Regular.ttf", 15)
+    
+    #Definimo las Funtes de los textos
+    Informacion = pygame.font.Font("Tipografias/PressStart2P-Regular.ttf", 15)
     Mensajes = pygame.font.Font("Tipografias/PressStart2P-Regular.ttf", 40)
     
+    #Cargo las diferentes imagenes que uso durante el juego y los transformo en la escala requerida
     Nave = pygame.image.load("Skin/Ship.png")
     Nave = pygame.transform.scale(Nave, (110, 100))
     Crab_1 = pygame.image.load("Skin/Alien/Crab 1.png") 
@@ -46,11 +51,10 @@ def juego_single_player():
     Explosion_img = pygame.image.load("Skin/Explocion.png")
     Explosion_img = pygame.transform.scale(Explosion_img, (40, 40))
     
-    #Blast = pygame.mixer.Sound("Sonidos/Blast.wav")
-    #Dead = pygame.mixer.Sound("Sonidos/Dead-Alien.wav")
-    #Explotion = pygame.mixer.Sound("Sonidos/Explotion.wav")
-    #Fondo = pygame.mixer.Sound("Sonidos/Fondo.mp3")
+    #Defino la musica de fondo del juego
+    Fondo = pygame.mixer.Sound("Sonidos/Fondo.mp3")
     
+    #Defino la forma de los bloques de defensa
     Defensa =  [
         '  xxxxxxx  ',
         ' xxxxxxxxx ',
@@ -61,6 +65,7 @@ def juego_single_player():
         'xx       xx'
     ]
 
+    #Defino la formacion de los niveles, representando cada letra un tipo de alien "C" al Crab, "S" al squid y "O" para el Octopus
     Niveles = [
      [
             ["C", "C", "C", "C", "C", "C", "C", "C"],
@@ -123,140 +128,179 @@ def juego_single_player():
             ["C", "C", "C", "C", "C", "C", "C", "C"],
         ]
     ]
-    def crear_enemigos_desde_nivel(nivel):
-        enemigos = []
-        tipo_enemigo = {
+    
+    #Definimos la funcion para cargar a los enemigos desde las matrices
+    def Crear_Enemigos(Nivel):
+        Enemigos = []
+        #Creao un diccionario donde cargamos las imagenes de cada tipo de alien y su valor al ser eleminados
+        Tipo_enemigo = {
             "C": (Crab_1, Crab_2, Crab_dead, 10),
             "O": (Octopus_1, Octopus_2, Octopus_dead, 30),
             "S": (Squid_1, Squid_2, Squid_dead, 20)
         }
-        espacio_x, espacio_y = 70, 70
-        for fila_idx, fila in enumerate(nivel):
-            for col_idx, tipo in enumerate(fila):
-                if tipo in tipo_enemigo:
-                    x = 100 + col_idx * espacio_x
-                    y = 50 + fila_idx * espacio_y
-                    img1, img2, img_dead, puntaje = tipo_enemigo[tipo]
-                    enemigo = Enemigo(x, y, img1, img2, img_dead, tipo)
+        #Defino variables de los espacio entre enemigos en el eje X y Y
+        Espacio_x = 70
+        Espacio_y = 50
+        
+        #Recorre cada fila del nivel, y cada columna de esa fila
+        for indice_fila, Fila in enumerate(Nivel):
+            for indice_columna, Tipo in enumerate(Fila):
+                if Tipo in Tipo_enemigo:
+                     #Calcula la posición del enemigo según su fila y columna
+                    x = 100 + indice_columna * Espacio_x
+                    y = 50 + indice_fila * Espacio_y
+                    img1, img2, img_dead, puntaje = Tipo_enemigo[Tipo] # Obtenemos imágenes y puntaje del tipo de enemigo
+                    #Crea el enemigo
+                    enemigo = Enemigo(x, y, img1, img2, img_dead, Tipo)
                     enemigo.puntaje = puntaje
-                    enemigos.append(Enemigo(x, y, img1, img2, img_dead, puntaje))
-        return enemigos
-               
+                    Enemigos.append(enemigo) # Agrega el enemigo a la lista
+        return Enemigos
+    
+    def verificar_bordes(Enemigos):
+        #Recorre todos los enemigos y verifica si alguno tocó el borde de la pantalla
+        for enemigo in Enemigos:
+            if enemigo.rect.right >= Ancho or enemigo.rect.left <= 0:
+                return True
+        return False
+    
+    #Defino algunos coloeres que usare en el codigo
     Blanco = (255, 255, 255)
     Rojo = (255, 0, 0)
     
-    ANCHO, ALTO = 898, 506
-    nivel_actual = 0
+    #Defini varibles que usare durante el juego
+    Ancho = 898
+    Alto = 506
+    Nivel_actual = 0
+    direccion_enemigos = 1
     reloj = pygame.time.Clock()
     ovni = Ovni(Ovni_1, Ovni_2, Ovni_dead)
-    jugador = Jugador()
+    Nave = Jugador()
     balas = []
     balas_enemigas = []
-    enemigos = crear_enemigos_desde_nivel(Niveles[nivel_actual])
+    enemigos = Crear_Enemigos(Niveles[Nivel_actual])
     explosiones = []
     x_posiciones = [120,320,520,720]
     bloques = []        
     for x in x_posiciones:
         bloque = Bloque(Defensa, Rojo, 8,(x, 450))
         bloques.append(bloque)
-    while jugador.vidas > 0:
-        reloj.tick(60)
-        Pantalla.blit(Fondo_Juego, (0, 0))
-        for bloque in bloques:
-            bloque.dibujar(Pantalla)
+        
+    while Nave.vidas > 0:
+        reloj.tick(100)  # Limita a 60 FPS
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-    
-        teclas = pygame.key.get_pressed()
-        jugador.mover(teclas)
-    
-        if jugador.disparar(teclas):
-            balas.append(Bala(jugador.rect.centerx - 12, jugador.rect.top, -8, Bala_img))
-    
+        Pantalla.blit(Fondo_Juego, (0, 0))
+        #Defino los controles para el juego
+        Teclas = pygame.key.get_pressed()
+        Nave.mover(Teclas)
+        if Nave.disparar(Teclas):
+            balas.append(Bala(Nave.rect.centerx - 12, Nave.rect.top, -8, Bala_img))
+            
+        #Dibujo las defensas
+        for bloque in bloques:
+            bloque.dibujar(Pantalla)
+        
+        #Dibujar jugador y enemigos activos
+        Nave.dibujar()
+        for enemigo in enemigos[:]:
+            if not enemigo.dibujar():
+                enemigos.remove(enemigo)
+
+        #Dibujo balas y explosiones
+            for bala in balas:
+                bala.dibujar()
+            for bala in balas_enemigas:
+                bala.dibujar()
+            for explosion in explosiones[:]:
+                explosion.dibujar()
+                if explosion.tiempo <= 0:
+                    explosiones.remove(explosion)
+        
+        #Dibujo y muevo las balas de la Nave
         for bala in balas[:]:
             bala.mover()
             if bala.rect.bottom < 0:
                 balas.remove(bala)
-            
+                
+        #Dibujo y defino los movimiento de enemigos y disparos enemigos
+        if verificar_bordes(enemigos):
+            direccion_enemigos *= -1
+            for enemigo in enemigos:
+                enemigo.rect.y += 35
         for enemigo in enemigos:
-            enemigo.mover()
+            enemigo.mover(direccion_enemigos)
             if random.randint(0, 800) == 1 and not enemigo.muerto:
                 balas_enemigas.append(Bala(enemigo.rect.centerx + 2, enemigo.rect.bottom, 6, Bala_alien))
-            if enemigo.rect.colliderect(jugador.rect):  # Si el enemigo toca al jugador
-                jugador.vidas = 0  # El jugador pierde todas las vidas
+    
+            if enemigo.rect.colliderect(Nave.rect):
+                Nave.vidas = 0
                 break
             else:
                 for bloque in bloques:
-                        if bloque.daño(enemigo.rect):
-                            break
-    
+                    if bloque.daño(enemigo.rect):
+                        break
+        
+        #Dibujo, defino el movimiento balas enemigas y verifico colisiones con el borde inferior
         for bala in balas_enemigas[:]:
-            bala.mover() 
-            if bala.rect.top > ALTO:
+            bala.mover()
+            if bala.rect.top > Alto:
                 balas_enemigas.remove(bala)
-    
+        
+        #Defino la detección de colisiones entre balas de la nave y enemigos/ovni
         for bala in balas[:]:
             for enemigo in enemigos[:]:
                 if bala.rect.colliderect(enemigo.rect) and not enemigo.muerto:
                     balas.remove(bala)
                     enemigo.muerto = True
                     enemigo.tiempo_muerte = pygame.time.get_ticks()
-                    jugador.puntaje += enemigo.tipo
+                    Nave.puntaje += enemigo.puntaje
                     break
-                if bala.rect.colliderect(ovni.rect) and not ovni.muerto:
-                    balas.remove(bala)
-                    ovni.muerto = True
-                    ovni.tiempo_muerte = pygame.time.get_ticks()
-                    jugador.puntaje += 50
+            if bala.rect.colliderect(ovni.rect) and not ovni.muerto:
+                balas.remove(bala)
+                ovni.muerto = True
+                ovni.tiempo_muerte = pygame.time.get_ticks()
+                Nave.puntaje += 50
         ovni.dibujar()
         ovni.mover()
+        
+        #Defino la detección de colisiones entre balas enemigas y la Nave/bloques
         for bala in balas_enemigas[:]:
-            if bala.rect.colliderect(jugador.rect):
+            if bala.rect.colliderect(Nave.rect):
                 balas_enemigas.remove(bala)
-                jugador.vidas -= 1
-                explosiones.append(Explosion(jugador.rect.x, jugador.rect.y))
+                Nave.vidas -= 1
+                explosiones.append(Explosion(Nave.rect.x, Nave.rect.y))
                 break
             else:
                 for bloque in bloques:
                     if bloque.daño(bala.rect):
                         balas_enemigas.remove(bala)
                         break
-        jugador.dibujar()
-        for enemigo in enemigos[:]:
-            if not enemigo.dibujar():
-                enemigos.remove(enemigo)
-        for bala in balas:
-            bala.dibujar()
-        for bala in balas_enemigas:
-            bala.dibujar()
-        for explosion in explosiones[:]:
-            explosion.dibujar()
-            if explosion.tiempo <= 0:  
-                explosiones.remove(explosion)
-    
-        Puntaje = Fuente.render(f"Puntaje: {jugador.puntaje}", True, Blanco)
-        Vidas = Fuente.render(f"Vidas: {jugador.vidas}", True, Blanco)
-        Nivel = Fuente.render(f"Nivel: {nivel_actual + 1}", True, Blanco)
-        Pantalla.blit(Puntaje, (10, 10))
-        Pantalla.blit(Vidas, (800, 10))
-        Pantalla.blit(Nivel,(10,40))
-        pygame.display.flip()
-    
+                
+        #  Mostrar información en pantalla: puntaje, vidas y nivel
+            Puntaje = Informacion.render(f"Puntaje: {Nave.puntaje}", True, Blanco)
+            Vidas = Informacion.render(f"Vidas: {Nave.vidas}", True, Blanco)
+            Nivel = Informacion.render(f"Nivel: {Nivel_actual + 1}", True, Blanco)
+            Pantalla.blit(Puntaje, (10, 10))
+            Pantalla.blit(Vidas, (800, 10))
+            Pantalla.blit(Nivel, (10, 40))
+            pygame.display.flip()
+
+        # Cambio de nivel si no quedan enemigos
         if not enemigos:
-            nivel_actual += 1
-            if nivel_actual < len(Niveles):
-                texto_nivel = Mensajes.render(f"Nivel {nivel_actual + 1} comenzando...", True, Blanco)
+            Nivel_actual += 1
+            if Nivel_actual < len(Niveles):
+                texto_nivel = Mensajes.render(f"Nivel {Nivel_actual + 1} comenzando...", True, Blanco)
                 Pantalla.blit(Fondo_Juego, (0, 0))
-                Pantalla.blit(texto_nivel, (60,250))
+                Pantalla.blit(texto_nivel, (60, 250))
                 pygame.display.flip()
                 pygame.time.delay(2000)
-                enemigos = crear_enemigos_desde_nivel(Niveles[nivel_actual])
+                enemigos = Crear_Enemigos(Niveles[Nivel_actual])
             else:
-                texto_final = Mensajes.render("\u00a1Ganaste!", True, Blanco)
+                texto_final = Mensajes.render("¡Ganaste!", True, Blanco)
                 Pantalla.blit(Fondo_Juego, (0, 0))
-                Pantalla.blit(texto_final, (ANCHO // 2 - texto_final.get_width() // 2, ALTO // 2))
+                Pantalla.blit(texto_final, (60, 250))
                 pygame.display.flip()
                 pygame.time.delay(3000)
                 pygame.quit()

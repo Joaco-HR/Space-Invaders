@@ -23,8 +23,6 @@ Fondo_Highsocre = pygame.image.load("Fondos/Highscore.png")
 Fondo_Highsocre = pygame.transform.scale(Fondo_Highsocre, (898, 506))
 Fondo_Inicio = Fondo_Menu
 
-
-
 Boton_return = pygame.image.load("Skin/Boton Return.png")
 Boton_return = pygame.transform.scale(Boton_return, (120, 120))
 Boton_return_o = pygame.image.load("Skin/Boton Return Oscuro.png")

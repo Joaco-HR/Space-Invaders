@@ -43,9 +43,9 @@ bala_alien= pygame.image.load("Skin/Bala Alien.png")
 bala_alien = pygame.transform.scale(bala_alien, (80, 80))
 explosion_img = pygame.image.load("Skin/Explocion.png")
 explosion_img = pygame.transform.scale(explosion_img, (40, 40))
-#Blast = pygame.mixer.Sound("Sonidos/Blast.wav")
-#Dead = pygame.mixer.Sound("Sonidos/Dead-Alien.wav")
-#Explotion = pygame.mixer.Sound("Sonidos/Explotion.wav")
+Blast = pygame.mixer.Sound("Sonidos/Blast.wav")
+Dead = pygame.mixer.Sound("Sonidos/Dead-Alien.wav")
+Explotion = pygame.mixer.Sound("Sonidos/Explotion.wav")
 
 # Clases
 class Jugador:
@@ -77,7 +77,6 @@ class Jugador:
 class Enemigo:
     def __init__(self, x, y, imagen_1, imagen_2, imagen_3,  tipo):
         self.rect = pygame.Rect(x, y, 40, 30)
-        self.direccion = 1
         self.imagenes = [imagen_1, imagen_2]
         self.dead = imagen_3
         self.indice_imagen = 0
@@ -86,10 +85,9 @@ class Enemigo:
         self.muerto = False
         self.tiempo_muerte = 0
         self.tipo = tipo
-        self.balas = [] 
+        self.balas = []
         self.intervalo_disparo = 1000
         self.ultimo_disparo = 0 
-
     def obtener_puntos(self):
         """Devuelve los puntos según el tipo de enemigo."""
         if self.tipo == 'C':
@@ -99,12 +97,9 @@ class Enemigo:
         elif self.tipo == 'O':
             return 30  # Octopus
         return 0
-    def mover(self):
+    def mover(self, direccion_global):
         if not self.muerto:
-            self.rect.x += self.direccion
-            if self.rect.right >= ANCHO or self.rect.left <= 0:
-                self.direccion *= -1
-                self.rect.y += 35
+            self.rect.x += direccion_global
     def disparar(self):
         tiempo_actual = pygame.time.get_ticks()
         if tiempo_actual - self.ultimo_disparo >= self.intervalo_disparo:
@@ -151,7 +146,7 @@ class Ovni:
         tiempo_actual = pygame.time.get_ticks()
         if self.muerto:
             Pantalla.blit(self.dead, self.rect.topleft)
-            #Dead.play()
+            Dead.play()
             if tiempo_actual - self.tiempo_muerte >= 300:
                 return False
         else:
@@ -165,6 +160,7 @@ class Ovni:
         self.muerto = False
         self.rect = pygame.Rect(10, 20, 40, 30)
         self.direccion = 4    
+        
 class Bala:
     def __init__(self, x, y, vel, imagen):
         self.rect = pygame.Rect(x, y, 14, 10)
@@ -207,9 +203,7 @@ class Bloque:
                             self.pixel
                         )
                     )
-
     def daño(self, rect_objetivo):
-        """Elimina un pixel del bloque si colisiona con rect_objetivo (puede ser una bala, enemigo, etc.)."""
         base_x, base_y = self.posicion
         for fila_idx, fila in enumerate(self.forma):
             for col_idx, celda in enumerate(fila):
