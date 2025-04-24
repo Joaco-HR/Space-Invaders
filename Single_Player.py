@@ -153,7 +153,7 @@ def juego_single_player():
                     #Crea el enemigo
                     enemigo = Enemigo(x, y, img1, img2, img_dead, Tipo)
                     enemigo.puntaje = puntaje
-                    Enemigos.append(enemigo) # Agrega el enemigo a la lista
+                    Enemigos.append(Enemigo(x, y, img1, img2, img_dead, puntaje)) # Agrega el enemigo a la lista
         return Enemigos
     
     def verificar_bordes(Enemigos):
@@ -174,7 +174,7 @@ def juego_single_player():
     direccion_enemigos = 1
     reloj = pygame.time.Clock()
     ovni = Ovni(Ovni_1, Ovni_2, Ovni_dead)
-    Nave = Jugador()
+    nave = Jugador()
     balas = []
     balas_enemigas = []
     enemigos = Crear_Enemigos(Niveles[Nivel_actual])
@@ -185,46 +185,32 @@ def juego_single_player():
         bloque = Bloque(Defensa, Rojo, 8,(x, 450))
         bloques.append(bloque)
         
-    while Nave.vidas > 0:
-        reloj.tick(100)  # Limita a 60 FPS
+    #Definimos el bulce principal del juego
+    while nave.vidas > 0:
+        reloj.tick(60)
+        Pantalla.blit(Fondo_Juego, (0, 0))
+        #Dibujo las defensas
+        for bloque in bloques:
+            bloque.dibujar(Pantalla)
+            
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-        Pantalla.blit(Fondo_Juego, (0, 0))
-        #Defino los controles para el juego
-        Teclas = pygame.key.get_pressed()
-        Nave.mover(Teclas)
-        if Nave.disparar(Teclas):
-            balas.append(Bala(Nave.rect.centerx - 12, Nave.rect.top, -8, Bala_img))
+                
+        #Defino los controles del juego
+        teclas = pygame.key.get_pressed()
+        nave.mover(teclas)
+        if nave.disparar(teclas):
+            balas.append(Bala(nave.rect.centerx - 12, nave.rect.top, -8, Bala_img))
             
-        #Dibujo las defensas
-        for bloque in bloques:
-            bloque.dibujar(Pantalla)
-        
-        #Dibujar jugador y enemigos activos
-        Nave.dibujar()
-        for enemigo in enemigos[:]:
-            if not enemigo.dibujar():
-                enemigos.remove(enemigo)
-
-        #Dibujo balas y explosiones
-            for bala in balas:
-                bala.dibujar()
-            for bala in balas_enemigas:
-                bala.dibujar()
-            for explosion in explosiones[:]:
-                explosion.dibujar()
-                if explosion.tiempo <= 0:
-                    explosiones.remove(explosion)
-        
         #Dibujo y muevo las balas de la Nave
         for bala in balas[:]:
             bala.mover()
             if bala.rect.bottom < 0:
                 balas.remove(bala)
-                
-        #Dibujo y defino los movimiento de enemigos y disparos enemigos
+        
+        #Defino los movimientos de los enemigos y disparos
         if verificar_bordes(enemigos):
             direccion_enemigos *= -1
             for enemigo in enemigos:
@@ -233,21 +219,20 @@ def juego_single_player():
             enemigo.mover(direccion_enemigos)
             if random.randint(0, 800) == 1 and not enemigo.muerto:
                 balas_enemigas.append(Bala(enemigo.rect.centerx + 2, enemigo.rect.bottom, 6, Bala_alien))
-    
-            if enemigo.rect.colliderect(Nave.rect):
-                Nave.vidas = 0
+            if enemigo.rect.colliderect(nave.rect):  # Si el enemigo toca al nave
+                nave.vidas = 0  # El nave pierde todas las vidas
                 break
             else:
                 for bloque in bloques:
-                    if bloque.daño(enemigo.rect):
-                        break
-        
-        #Dibujo, defino el movimiento balas enemigas y verifico colisiones con el borde inferior
+                        if bloque.daño(enemigo.rect):
+                            break
+                            
+        #Defino movimiento de balas enemigas y verificar colisiones con el borde inferior
         for bala in balas_enemigas[:]:
-            bala.mover()
+            bala.mover() 
             if bala.rect.top > Alto:
                 balas_enemigas.remove(bala)
-        
+    
         #Defino la detección de colisiones entre balas de la nave y enemigos/ovni
         for bala in balas[:]:
             for enemigo in enemigos[:]:
@@ -255,52 +240,68 @@ def juego_single_player():
                     balas.remove(bala)
                     enemigo.muerto = True
                     enemigo.tiempo_muerte = pygame.time.get_ticks()
-                    Nave.puntaje += enemigo.puntaje
+                    nave.puntaje += enemigo.tipo
                     break
-            if bala.rect.colliderect(ovni.rect) and not ovni.muerto:
-                balas.remove(bala)
-                ovni.muerto = True
-                ovni.tiempo_muerte = pygame.time.get_ticks()
-                Nave.puntaje += 50
+                if bala.rect.colliderect(ovni.rect) and not ovni.muerto:
+                    balas.remove(bala)
+                    ovni.muerto = True
+                    ovni.tiempo_muerte = pygame.time.get_ticks()
+                    nave.puntaje += 50
         ovni.dibujar()
         ovni.mover()
         
-        #Defino la detección de colisiones entre balas enemigas y la Nave/bloques
+        #Defino las colisiones entre balas enemigas y la nave/bloques
         for bala in balas_enemigas[:]:
-            if bala.rect.colliderect(Nave.rect):
+            if bala.rect.colliderect(nave.rect):
                 balas_enemigas.remove(bala)
-                Nave.vidas -= 1
-                explosiones.append(Explosion(Nave.rect.x, Nave.rect.y))
+                nave.vidas -= 1
+                explosiones.append(Explosion(nave.rect.x, nave.rect.y))
                 break
             else:
                 for bloque in bloques:
                     if bloque.daño(bala.rect):
                         balas_enemigas.remove(bala)
                         break
-                
-        #  Mostrar información en pantalla: puntaje, vidas y nivel
-            Puntaje = Informacion.render(f"Puntaje: {Nave.puntaje}", True, Blanco)
-            Vidas = Informacion.render(f"Vidas: {Nave.vidas}", True, Blanco)
-            Nivel = Informacion.render(f"Nivel: {Nivel_actual + 1}", True, Blanco)
-            Pantalla.blit(Puntaje, (10, 10))
-            Pantalla.blit(Vidas, (800, 10))
-            Pantalla.blit(Nivel, (10, 40))
-            pygame.display.flip()
-
-        # Cambio de nivel si no quedan enemigos
+        
+        #Dibujo a la nave y enemigos
+        nave.dibujar()
+        for enemigo in enemigos[:]:
+            if not enemigo.dibujar():
+                enemigos.remove(enemigo)
+        
+        #Dibujo las balas y explosiones
+        for bala in balas:
+            bala.dibujar()
+        for bala in balas_enemigas:
+            bala.dibujar()
+        for explosion in explosiones[:]:
+            explosion.dibujar()
+            if explosion.tiempo <= 0:  
+                explosiones.remove(explosion)
+    
+        #Muestro información en pantalla: puntaje, vidas y nivel
+        Puntaje = Informacion.render(f"Puntaje: {nave.puntaje}", True, Blanco)
+        Vidas = Informacion.render(f"Vidas: {nave.vidas}", True, Blanco)
+        Nivel = Informacion.render(f"Nivel: {Nivel_actual + 1}", True, Blanco)
+        Pantalla.blit(Puntaje, (10, 10))
+        Pantalla.blit(Vidas, (800, 10))
+        Pantalla.blit(Nivel,(10,40))
+        pygame.display.flip()
+    
+        #Defino el cambio de nivel si no quedan enemigos y el fin del juego si no quedan niveles
         if not enemigos:
             Nivel_actual += 1
             if Nivel_actual < len(Niveles):
                 texto_nivel = Mensajes.render(f"Nivel {Nivel_actual + 1} comenzando...", True, Blanco)
                 Pantalla.blit(Fondo_Juego, (0, 0))
-                Pantalla.blit(texto_nivel, (60, 250))
+                Pantalla.blit(texto_nivel, (60,250))
                 pygame.display.flip()
                 pygame.time.delay(2000)
                 enemigos = Crear_Enemigos(Niveles[Nivel_actual])
             else:
-                texto_final = Mensajes.render("¡Ganaste!", True, Blanco)
+                texto_final = Mensajes.render("Ganaste!", True, Blanco)
                 Pantalla.blit(Fondo_Juego, (0, 0))
-                Pantalla.blit(texto_final, (60, 250))
+                Pantalla.blit(texto_final, (60,250))
                 pygame.display.flip()
                 pygame.time.delay(3000)
                 pygame.quit()

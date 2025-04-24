@@ -68,7 +68,7 @@ class Jugador:
     def disparar(self, teclas):
         tiempo_actual = pygame.time.get_ticks()
         if teclas[pygame.K_SPACE] and tiempo_actual - self.ultimo_disparo >= self.intervalo_disparo:
-            #Blast.play()
+            Blast.play()
             self.ultimo_disparo = tiempo_actual  
             return True 
     def dibujar(self):
@@ -110,7 +110,7 @@ class Enemigo:
         tiempo_actual = pygame.time.get_ticks()
         if self.muerto:
             Pantalla.blit(self.dead, self.rect.topleft)
-            #Dead.play()
+            Dead.play()
             if tiempo_actual - self.tiempo_muerte >= 300:
                 return False
         else:
@@ -130,7 +130,10 @@ class Ovni:
         self.intervalo_cambio = 500
         self.ultimo_cambio = pygame.time.get_ticks()
         self.muerto = False
-        self.tiempo_espera = 8000 
+        self.tiempo_muerte = 0
+        self.esperando_reaparecer = False
+        self.tiempo_reaparecer = 0
+        self.delay_reaparicion = 6000
     def mover(self):
         if not self.muerto:
             self.rect.x += self.direccion
@@ -138,9 +141,6 @@ class Ovni:
                 self.direccion *= -1  #
             elif self.rect.left <= -300:  
                 self.direccion *= -1
-        else:
-            if pygame.time.get_ticks() - self.tiempo_muerte >= self.tiempo_espera:
-                self.reaparecer()
                 
     def dibujar(self):
         tiempo_actual = pygame.time.get_ticks()
@@ -148,8 +148,15 @@ class Ovni:
             Pantalla.blit(self.dead, self.rect.topleft)
             Dead.play()
             if tiempo_actual - self.tiempo_muerte >= 300:
-                return False
+                self.muerto = False
+                self.esperando_reaparecer = True
+                self.tiempo_reaparecer = tiempo_actual  # Marca inicio del delay
+        elif self.esperando_reaparecer:
+            # Espera hasta que pase el tiempo de delay para reaparecer
+            if tiempo_actual - self.tiempo_reaparecer >= self.delay_reaparicion:
+                self.reaparecer()
         else:
+            # Animación normal del ovni
             if tiempo_actual - self.ultimo_cambio >= self.intervalo_cambio:
                 self.indice_imagen = (self.indice_imagen + 1) % len(self.imagenes)
                 self.ultimo_cambio = tiempo_actual
@@ -157,7 +164,7 @@ class Ovni:
             Pantalla.blit(imagen_actual, self.rect.topleft)
         return True
     def reaparecer(self):
-        self.muerto = False
+        self.esperando_reaparecer = False
         self.rect = pygame.Rect(10, 20, 40, 30)
         self.direccion = 4    
         
@@ -178,7 +185,7 @@ class Explosion:
 
     def dibujar(self):
         Pantalla.blit(explosion_img, self.rect.topleft)
-        #Explotion.play()
+        Explotion.play()
         self.tiempo -= 1
 
 class Bloque:
@@ -215,4 +222,3 @@ class Bloque:
                         self.forma[fila_idx][col_idx] = ' '  # Eliminar pixel
                         return True  # Solo eliminamos uno por llamada
         return False
-
