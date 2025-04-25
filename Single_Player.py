@@ -1,8 +1,31 @@
 import pygame
 import random
+import time
+import json
+import os
 import sys
 from Clases import Jugador, Enemigo, Ovni, Bala, Explosion, Bloque #Importamos las Clases desde el archivo de clases
 
+def guardar_puntaje(nombre_jugador, puntaje, archivo="puntajes.json"):
+    datos = []
+
+    # Si el archivo existe, lo leemos
+    if os.path.exists(archivo):
+        with open(archivo, 'r') as f:
+            try:
+                datos = json.load(f)
+            except json.JSONDecodeError:
+                datos = []
+
+    # Añadimos el nuevo puntaje
+    datos.append({
+        "nombre": nombre_jugador,
+        "puntaje": puntaje
+    })
+
+    # Guardamos nuevamente en el archivo
+    with open(archivo, 'w') as f:
+        json.dump(datos, f, indent=4)
 def juego_single_player():
     pygame.init()
     #Definimo el tamaño de la pantalla y el nombre de esta
@@ -12,6 +35,10 @@ def juego_single_player():
     #Definimo el fondo
     Fondo_Juego = pygame.image.load("Fondos/Juego.png")
     Fondo_Juego = pygame.transform.scale(Fondo_Juego, (930, 600))
+    Fondo_eleccion = pygame.image.load("Fondos/Eleccion.png")
+    Fondo_eleccion = pygame.transform.scale(Fondo_eleccion, (930, 600))
+    Fondo_Game_over = pygame.image.load("Fondos/Game Over.png")
+    Fondo_Game_over = pygame.transform.scale(Fondo_Game_over, (930, 600))
     
     #Definimo las Funtes de los textos
     Informacion = pygame.font.Font("Tipografias/PressStart2P-Regular.ttf", 15)
@@ -52,7 +79,8 @@ def juego_single_player():
     Explosion_img = pygame.transform.scale(Explosion_img, (40, 40))
     
     #Defino la musica de fondo del juego
-    Fondo = pygame.mixer.Sound("Sonidos/Fondo.mp3")
+    Ganador = pygame.mixer.Sound("Sonidos/Ganador.mp3")
+    Perdedor = pygame.mixer.Sound("Sonidos/Perdedor.mp3")
     
     #Defino la forma de los bloques de defensa
     Defensa =  [
@@ -130,7 +158,25 @@ def juego_single_player():
     ]
     
     #Definimos la funcion para cargar a los enemigos desde las matrices
-    def Crear_Enemigos(Nivel):
+    def guardar_puntaje(nombre, puntaje):
+        nuevo_puntaje = {"nombre": nombre, "puntaje": puntaje}
+
+        # Intenta abrir el archivo y cargarlo
+        try:    
+            with open("puntajes.json", "r") as archivo:
+                datos = json.load(archivo)
+                if not isinstance(datos, list):
+                    datos = []  # Si no es lista, lo inicializamos como lista vacía
+        except (FileNotFoundError, json.JSONDecodeError):
+            datos = []  # Si el archivo no existe o está corrupto, usamos lista vacía
+
+        datos.append(nuevo_puntaje)
+
+        with open("puntajes.json", "w") as archivo:
+            json.dump(datos, archivo, indent=4)
+
+    
+    def Crear_Enemigos(Nivel, nivel_actual=0):
         Enemigos = []
         #Creao un diccionario donde cargamos las imagenes de cada tipo de alien y su valor al ser eleminados
         Tipo_enemigo = {
@@ -142,6 +188,8 @@ def juego_single_player():
         Espacio_x = 70
         Espacio_y = 50
         
+        velocidad = 1 + (nivel_actual * 0.5)
+        
         #Recorre cada fila del nivel, y cada columna de esa fila
         for indice_fila, Fila in enumerate(Nivel):
             for indice_columna, Tipo in enumerate(Fila):
@@ -151,9 +199,9 @@ def juego_single_player():
                     y = 50 + indice_fila * Espacio_y
                     img1, img2, img_dead, puntaje = Tipo_enemigo[Tipo] # Obtenemos imágenes y puntaje del tipo de enemigo
                     #Crea el enemigo
-                    enemigo = Enemigo(x, y, img1, img2, img_dead, Tipo)
+                    enemigo = Enemigo(x, y, img1, img2, img_dead, Tipo, velocidad)
                     enemigo.puntaje = puntaje
-                    Enemigos.append(Enemigo(x, y, img1, img2, img_dead, puntaje)) # Agrega el enemigo a la lista
+                    Enemigos.append(Enemigo(x, y, img1, img2, img_dead, puntaje, velocidad)) # Agrega el enemigo a la lista
         return Enemigos
     
     def verificar_bordes(Enemigos):
@@ -170,21 +218,48 @@ def juego_single_player():
     #Defini varibles que usare durante el juego
     Ancho = 898
     Alto = 506
-    Nivel_actual = 0
+    Nivel_actual = 8
     direccion_enemigos = 1
     reloj = pygame.time.Clock()
     ovni = Ovni(Ovni_1, Ovni_2, Ovni_dead)
     nave = Jugador()
     balas = []
     balas_enemigas = []
-    enemigos = Crear_Enemigos(Niveles[Nivel_actual])
+    enemigos = Crear_Enemigos(Niveles[Nivel_actual], Nivel_actual)
     explosiones = []
     x_posiciones = [120,320,520,720]
     bloques = []        
     for x in x_posiciones:
         bloque = Bloque(Defensa, Rojo, 8,(x, 450))
         bloques.append(bloque)
-        
+    Nombre = ""
+    Ingrese_nombre = True
+    
+    clock = pygame.time.Clock()
+    #Ingrasamos nombre del jugador
+    while Ingrese_nombre:
+        clock.tick(60)
+        Pantalla.blit(Fondo_eleccion, (0, 0))
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_RETURN:
+                    print("Texto ingresado:", Nombre)
+                    Ingrese_nombre = False
+                elif evento.key == pygame.K_BACKSPACE:
+                    Nombre = Nombre[:-1]
+                else:
+                    Nombre += evento.unicode
+        ingreso = Mensajes.render(Nombre, True, Blanco)
+        Pantalla.blit(ingreso, (500, 285))
+        pygame.display.update()
+    Pantalla.blit(Fondo_Juego, (0, 0))
+    mensaje_carga = Mensajes.render("Cargando Juego...", True, Blanco)
+    Pantalla.blit(mensaje_carga, (150, 290))
+    pygame.display.update()
+    time.sleep(2)
     #Definimos el bulce principal del juego
     while nave.vidas > 0:
         reloj.tick(60)
@@ -289,6 +364,14 @@ def juego_single_player():
         pygame.display.flip()
     
         #Defino el cambio de nivel si no quedan enemigos y el fin del juego si no quedan niveles
+        if nave.vidas < 1:
+            Pantalla.blit(Fondo_Game_over, (0, 0))
+            Perdedor.play()
+            pygame.display.flip()
+            pygame.time.delay(5000)
+            guardar_puntaje(Nombre, nave.puntaje)
+            Pantalla = pygame.display.set_mode((898, 506))
+            return
         if not enemigos:
             Nivel_actual += 1
             if Nivel_actual < len(Niveles):
@@ -299,11 +382,10 @@ def juego_single_player():
                 pygame.time.delay(2000)
                 enemigos = Crear_Enemigos(Niveles[Nivel_actual])
             else:
-                texto_final = Mensajes.render("Ganaste!", True, Blanco)
-                Pantalla.blit(Fondo_Juego, (0, 0))
-                Pantalla.blit(texto_final, (60,250))
+                Ganador.play()
+                Pantalla.blit(Fondo_Game_over, (0, 0))
                 pygame.display.flip()
-                pygame.time.delay(3000)
-                pygame.quit()
-                sys.exit()
-juego_single_player()
+                pygame.time.delay(5000)
+                guardar_puntaje(Nombre, nave.puntaje)
+                Pantalla = pygame.display.set_mode((898, 506))
+                return

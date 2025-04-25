@@ -74,8 +74,8 @@ class Jugador:
     def dibujar(self):
         Pantalla.blit(Nave, self.rect.topleft)
 
-class Enemigo:
-    def __init__(self, x, y, imagen_1, imagen_2, imagen_3,  tipo):
+class Enemigo(pygame.sprite.Sprite):
+    def __init__(self, x, y, imagen_1, imagen_2, imagen_3,  tipo, velocidad):
         self.rect = pygame.Rect(x, y, 40, 30)
         self.imagenes = [imagen_1, imagen_2]
         self.dead = imagen_3
@@ -88,6 +88,8 @@ class Enemigo:
         self.balas = []
         self.intervalo_disparo = 1000
         self.ultimo_disparo = 0 
+        self.direccion = 1
+        self.velocidad = velocidad
     def obtener_puntos(self):
         """Devuelve los puntos según el tipo de enemigo."""
         if self.tipo == 'C':
@@ -99,7 +101,7 @@ class Enemigo:
         return 0
     def mover(self, direccion_global):
         if not self.muerto:
-            self.rect.x += direccion_global
+            self.rect.x += direccion_global * self.velocidad
     def disparar(self):
         tiempo_actual = pygame.time.get_ticks()
         if tiempo_actual - self.ultimo_disparo >= self.intervalo_disparo:
