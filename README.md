@@ -1,4 +1,5 @@
 Este proyecto es una versión del clásico juego Space Invaders, desarrollada con Pygame y Python. El objetivo del juego es defender la Tierra destruyendo oleadas de enemigos espaciales que descienden progresivamente. El jugador puede moverse de izquierda a derecha, disparar, protegerse detrás de bloques destructibles, y enfrentarse a los aliens.
+
 Bitacora:
 - Día 10/04/2025: En este día me asignaron el trabajo y empecé con la investigación, reuniendo información sobre todo lo necesario para el desarrollo. Además, comencé a diseñar los diferentes fondos y a buscar las skins de los aliens, la nave, etc.
 - Casa: Seguí avanzando en mi casa para continuar recopilando ideas e información del juego, además de ir desarrollando poco a poco el código del juego.
