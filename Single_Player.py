@@ -218,7 +218,7 @@ def juego_single_player():
     #Defini varibles que usare durante el juego
     Ancho = 898
     Alto = 506
-    Nivel_actual = 8
+    Nivel_actual = 0
     direccion_enemigos = 1
     reloj = pygame.time.Clock()
     ovni = Ovni(Ovni_1, Ovni_2, Ovni_dead)

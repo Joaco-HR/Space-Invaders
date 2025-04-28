@@ -42,5 +42,9 @@
     {
         "nombre": "2",
         "puntaje": 0
+    },
+    {
+        "nombre": "Glich",
+        "puntaje": 290
     }
 ]
